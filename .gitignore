@@ -1,0 +1,34 @@
+# Binaries
+/target/
+**/*.rs.bk
+**/*.exe
+**/*.out
+
+# Build artifacts
+Cargo.lock
+
+# Logs
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.sw?
+*.swo
+*.swp
+
+# Backup files
+*.bak
+*.tmp
+*~
+
+# Node-related (if you ever use frontend in same repo)
+node_modules/
+dist/
+
+# Rust project-specific
+/.cargo/
