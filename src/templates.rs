@@ -80,7 +80,7 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
             use_cache_headers: false,
         },
         DomainGroup {
-            patterns: vec![r"(?i)(?:^|\.)shadowlandschronicles\.", r"(?i)digitalshinecollective\.xyz$"],
+            patterns: vec![r"(?i)(?:^|\.)shadowlandschronicles\.", r"(?i)digitalshinecollective\.xyz$", r"(?i)thrivequesthub\.xyz$", r"(?i)novaedgelabs\.xyz$"],
             origin: "https://cloudnestra.com",
             referer: "https://cloudnestra.com/",
             sec_fetch_site: "cross-site",
