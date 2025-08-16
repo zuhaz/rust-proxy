@@ -40,6 +40,25 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
         },
         DomainGroup {
             patterns: vec![
+                r"(?i)\.streamtape\.to$",
+            ],
+            origin: "https://streamtape.to",
+            referer: "https://streamtape.to/",
+            sec_fetch_site: "cross-site",
+            use_cache_headers: false,
+        },
+
+        DomainGroup {
+            patterns: vec![
+               r"(?i)vidcache\.net$",
+            ],
+            origin: "https://www.animegg.org",
+            referer: "https://www.animegg.org/",
+            sec_fetch_site: "cross-site",
+            use_cache_headers: false,
+        },
+        DomainGroup {
+            patterns: vec![
                 r"(?i)krussdomi\.com$",
                 r"(?i)revolutionizingtheweb\.xyz$",
                 r"(?i)nextgentechnologytrends\.xyz$",
@@ -61,7 +80,7 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
             use_cache_headers: false,
         },
         DomainGroup {
-            patterns: vec![r"(?i)(?:^|\.)shadowlandschronicles\."],
+            patterns: vec![r"(?i)(?:^|\.)shadowlandschronicles\.", r"(?i)digitalshinecollective\.xyz$"],
             origin: "https://cloudnestra.com",
             referer: "https://cloudnestra.com/",
             sec_fetch_site: "cross-site",
@@ -173,7 +192,7 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
             use_cache_headers: false,
         },
         DomainGroup {
-            patterns: vec![r"(?i)nextwaveinitiative\.xyz$", r"(?i)shadowlandschronicles\.com$"],
+            patterns: vec![r"(?i)nextwaveinitiative\.xyz$"],
             origin: "https://edgedeliverynetwork.org",
             referer: "https://edgedeliverynetwork.org/",
             sec_fetch_site: "cross-site",
