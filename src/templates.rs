@@ -178,7 +178,7 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
             use_cache_headers: false,
         },
         DomainGroup {
-            patterns: vec![r"(?i)lightningspark77\.pro$", r"(?i)thunderwave48\.xyz$", r"(?i)stormwatch95\.site$", r"(?i)windyrays29\.online$", r"(?i)thunderstrike77\.online$", r"(?i)lightningflash39\.live$", r"(?i)cloudburst82\.xyz$", r"(?i)drizzleshower19\.site$", r"(?i)rainstorm92\.xyz$"],
+            patterns: vec![r"(?i)lightningspark77\.pro$", r"(?i)thunderwave48\.xyz$", r"(?i)stormwatch95\.site$", r"(?i)windyrays29\.online$", r"(?i)thunderstrike77\.online$", r"(?i)lightningflash39\.live$", r"(?i)cloudburst82\.xyz$", r"(?i)drizzleshower19\.site$", r"(?i)rainstorm92\.xyz$", r"(?i)cloudburst99\.xyz$"],
             origin: "https://megacloud.club",
             referer: "https://megacloud.club/",
             sec_fetch_site: "cross-site",
