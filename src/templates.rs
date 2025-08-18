@@ -1,4 +1,4 @@
-use regex::Regex;
+    use regex::Regex;
 use once_cell::sync::Lazy;
 use url::Url;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
@@ -178,12 +178,20 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
             use_cache_headers: false,
         },
         DomainGroup {
-            patterns: vec![r"(?i)lightningspark77\.pro$", r"(?i)thunderwave48\.xyz$", r"(?i)stormwatch95\.site$", r"(?i)windyrays29\.online$", r"(?i)thunderstrike77\.online$", r"(?i)lightningflash39\.live$", r"(?i)cloudburst82\.xyz$", r"(?i)drizzleshower19\.site$", r"(?i)rainstorm92\.xyz$", r"(?i)cloudburst99\.xyz$"],
+            patterns: vec![r"(?i)lightningspark77\.pro$", r"(?i)thunderwave48\.xyz$", r"(?i)stormwatch95\.site$", r"(?i)windyrays29\.online$", r"(?i)thunderstrike77\.online$", r"(?i)lightningflash39\.live$", r"(?i)cloudburst82\.xyz$", r"(?i)drizzleshower19\.site$", r"(?i)rainstorm92\.xyz$"],
             origin: "https://megacloud.club",
             referer: "https://megacloud.club/",
             sec_fetch_site: "cross-site",
             use_cache_headers: false,
         },
+
+        DomainGroup {
+            patterns: vec![r"(?i)cloudburst99\.xyz$", r"(?i)frostywinds73\.pro$", r"(?i)stormwatch39\.live$", r"(?i)sunnybreeze16\.live$", r"(?i)mistydawn62\.pro$", r"(?i)lightningbolt21\.live$", r"(?i)gentlebreeze85\.xyz$", ],
+            origin: "https://videostr.net",
+            referer: "https://videostr.net/",            
+            sec_fetch_site: "sa-site",
+            use_cache_headers: false,
+        },        
         DomainGroup {
             patterns: vec![r"(?i)vmeas\.cloud$"],
             origin: "https://vidmoly.to",
