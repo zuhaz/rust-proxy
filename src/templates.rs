@@ -1,4 +1,4 @@
-    use regex::Regex;
+use regex::Regex;
 use once_cell::sync::Lazy;
 use url::Url;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
@@ -17,13 +17,12 @@ static DEFAULT_HEADERS: Lazy<HashMap<String, String>> = Lazy::new(|| {
     ])
 });
 
-// Define domain group configuration
+// Define domain group configuration - simplified and focused
 struct DomainGroup {
     patterns: Vec<&'static str>,
     origin: &'static str,
     referer: &'static str,
-    sec_fetch_site: &'static str,
-    use_cache_headers: bool,
+    custom_headers: Option<HashMap<&'static str, &'static str>>, // New: custom headers per domain
 }
 
 static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
@@ -35,8 +34,10 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
             ],
             origin: "https://kwik.si",
             referer: "https://kwik.si/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: Some(HashMap::from([
+                ("cache-control", "no-cache"),
+                ("pragma", "no-cache"),
+            ])),
         },
         DomainGroup {
             patterns: vec![
@@ -44,18 +45,15 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
             ],
             origin: "https://streamtape.to",
             referer: "https://streamtape.to/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
-
         DomainGroup {
             patterns: vec![
                r"(?i)vidcache\.net$",
             ],
             origin: "https://www.animegg.org",
             referer: "https://www.animegg.org/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![
@@ -69,302 +67,248 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
             ],
             origin: "https://krussdomi.com",
             referer: "https://krussdomi.com/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.akamaized\.net$"],
             origin: "https://players.akamai.com",
             referer: "https://players.akamai.com/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)(?:^|\.)shadowlandschronicles\.", r"(?i)digitalshinecollective\.xyz$", r"(?i)thrivequesthub\.xyz$", r"(?i)novaedgelabs\.xyz$"],
             origin: "https://cloudnestra.com",
             referer: "https://cloudnestra.com/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },        
         DomainGroup {
             patterns: vec![r"(?i)(?:^|\.)viddsn\."],
             origin: "https://vidwish.live/",
             referer: "https://vidwish.live/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)(?:^|\.)dotstream\.", r"(?i)(?:^|\.)playcloud1\."],
             origin: "https://megaplay.buzz/",
             referer: "https://megaplay.buzz/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },        
         DomainGroup {
             patterns: vec![r"(?i)\.cloudfront\.net$"],
             origin: "https://d2zihajmogu5jn.cloudfront.net",
             referer: "https://d2zihajmogu5jn.cloudfront.net/",
-            sec_fetch_site: "same-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.ttvnw\.net$"],
             origin: "https://www.twitch.tv",
             referer: "https://www.twitch.tv/",
-            sec_fetch_site: "same-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.xx\.fbcdn\.net$"],
             origin: "https://www.facebook.com",
             referer: "https://www.facebook.com/",
-            sec_fetch_site: "same-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.anih1\.top$", r"(?i)\.xyk3\.top$"],
             origin: "https://ee.anih1.top",
             referer: "https://ee.anih1.top/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.premilkyway\.com$"],
             origin: "https://uqloads.xyz",
             referer: "https://uqloads.xyz/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.streamcdn\.com$"],
             origin: "https://anime.uniquestream.net",
             referer: "https://anime.uniquestream.net/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.raffaellocdn\.net$", r"(?i)\.feetcdn\.com$", r"(?i)clearskydrift45\.site$"],
             origin: "https://kerolaunochan.online",
             referer: "https://kerolaunochan.online/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)dewbreeze84\.online$", r"(?i)cloudydrift38\.site$", r"(?i)sunshinerays93\.live$", r"(?i)clearbluesky72\.wiki$", r"(?i)breezygale56\.online$", r"(?i)frostbite27\.pro$", r"(?i)frostywinds57\.live$", r"(?i)icyhailstorm64\.wiki$", r"(?i)icyhailstorm29\.online$", r"(?i)windflash93\.xyz$", r"(?i)stormdrift27\.site$", r"(?i)tempestcloud61\.wiki$", r"(?i)sunburst66\.pro$", r"(?i)douvid\.xyz$"],
             origin: "https://megacloud.blog",
             referer: "https://megacloud.blog/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: Some(HashMap::from([
+                ("cache-control", "no-cache"),
+                ("pragma", "no-cache"),
+            ])),
         },
         DomainGroup {
             patterns: vec![r"(?i)\.echovideo\.to$"],
             origin: "https://aniwave.at",
             referer: "https://aniwave.at/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.vid-cdn\.xyz$"],
             origin: "https://anizone.to/",
             referer: "https://anizone.to/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.1stkmgv1\.com$"],
             origin: "https://animeyy.com",
             referer: "https://animeyy.com/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)lightningspark77\.pro$", r"(?i)thunderwave48\.xyz$", r"(?i)stormwatch95\.site$", r"(?i)windyrays29\.online$", r"(?i)thunderstrike77\.online$", r"(?i)lightningflash39\.live$", r"(?i)cloudburst82\.xyz$", r"(?i)drizzleshower19\.site$", r"(?i)rainstorm92\.xyz$"],
             origin: "https://megacloud.club",
             referer: "https://megacloud.club/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
-
         DomainGroup {
-            patterns: vec![r"(?i)cloudburst99\.xyz$", r"(?i)frostywinds73\.pro$", r"(?i)stormwatch39\.live$", r"(?i)sunnybreeze16\.live$", r"(?i)mistydawn62\.pro$", r"(?i)lightningbolt21\.live$", r"(?i)gentlebreeze85\.xyz$", ],
+            patterns: vec![r"(?i)cloudburst99\.xyz$", r"(?i)frostywinds73\.pro$", r"(?i)stormwatch39\.live$", r"(?i)sunnybreeze16\.live$", r"(?i)mistydawn62\.pro$", r"(?i)lightningbolt21\.live$", r"(?i)gentlebreeze85\.xyz$"],
             origin: "https://videostr.net",
             referer: "https://videostr.net/",            
-            sec_fetch_site: "sa-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },        
         DomainGroup {
             patterns: vec![r"(?i)vmeas\.cloud$"],
             origin: "https://vidmoly.to",
             referer: "https://vidmoly.to/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)nextwaveinitiative\.xyz$"],
             origin: "https://edgedeliverynetwork.org",
             referer: "https://edgedeliverynetwork.org/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)lightningbolts\.ru$", r"(?i)lightningbolt\.site$", r"(?i)vyebzzqlojvrl\.top$"],
             origin: "https://vidsrc.cc",
             referer: "https://vidsrc.cc/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)vidlvod\.store$"],
             origin: "https://vidlink.pro",
             referer: "https://vidlink.pro/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)sunnybreeze16\.live$"],
             origin: "https://megacloud.store",
             referer: "https://megacloud.store/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)heatwave90\.pro$", r"(?i)humidmist27\.wiki$", r"(?i)frozenbreeze65\.live$", r"(?i)drizzlerain73\.online$", r"(?i)sunrays81\.xyz$"],
             origin: "https://kerolaunochan.live",
             referer: "https://kerolaunochan.live/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)\.vkcdn5\.com$"],
             origin: "https://vkspeed.com",
             referer: "https://vkspeed.com/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
         DomainGroup {
             patterns: vec![r"(?i)embed\.su$", r"(?i)usbigcdn\.cc$", r"(?i)\.congacdn\.cc$"],
             origin: "https://embed.su",
             referer: "https://embed.su/",
-            sec_fetch_site: "cross-site",
-            use_cache_headers: false,
+            custom_headers: None,
         },
     ]
 });
 
-// Define DomainTemplate struct with configuration
-pub struct DomainTemplate {
-    pub pattern: Regex,
-    pub origin: String,
-    pub referer: String,
-    pub sec_fetch_site: String,
-    pub use_cache_headers: bool,
-}
-
-impl DomainTemplate {
-    fn generate_headers(&self) -> HeaderMap {
-        let mut headers = HeaderMap::new();
-        let base_headers = DEFAULT_HEADERS.clone();
-
-        // Add base headers, overriding sec-fetch-site
-        for (key, value) in base_headers.iter() {
-            let final_value = if key == "sec-fetch-site" {
-                &self.sec_fetch_site
-            } else {
-                value
-            };
-            if let (Ok(name), Ok(val)) = (
-                HeaderName::from_str(key),
-                HeaderValue::from_str(final_value),
-            ) {
-                headers.insert(name, val);
-            }
+// Generate headers for a URL with optional custom origin
+pub fn generate_headers_for_url(url: &Url, custom_origin: Option<&str>) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    
+    // Add base headers
+    for (key, value) in DEFAULT_HEADERS.iter() {
+        if let (Ok(name), Ok(val)) = (
+            HeaderName::from_str(key),
+            HeaderValue::from_str(value),
+        ) {
+            headers.insert(name, val);
         }
+    }
 
-        // Add cache headers if needed
-        if self.use_cache_headers {
-            if let (Ok(name), Ok(val)) = (
-                HeaderName::from_str("cache-control"),
-                HeaderValue::from_str("no-cache"),
-            ) {
-                headers.insert(name, val);
-            }
-            if let (Ok(name), Ok(val)) = (
-                HeaderName::from_str("pragma"),
-                HeaderValue::from_str("no-cache"),
-            ) {
-                headers.insert(name, val);
-            }
-        }
-
-        // Add origin and referer
+    // If custom origin is provided, use it
+    if let Some(origin) = custom_origin {
         if let (Ok(name), Ok(val)) = (
             HeaderName::from_str("origin"),
-            HeaderValue::from_str(&self.origin),
+            HeaderValue::from_str(origin),
         ) {
             headers.insert(name, val);
         }
+        
+        // Set referer based on custom origin
+        let referer = if origin.ends_with('/') {
+            origin.to_string()
+        } else {
+            format!("{}/", origin)
+        };
+        
         if let (Ok(name), Ok(val)) = (
             HeaderName::from_str("referer"),
-            HeaderValue::from_str(&self.referer),
+            HeaderValue::from_str(&referer),
         ) {
             headers.insert(name, val);
         }
+    } else {
+        // Find matching domain template and use its headers
+        let hostname = url.host_str().unwrap_or("");
+        if let Some(group) = DOMAIN_GROUPS.iter().find(|g| {
+            g.patterns.iter().any(|pattern| {
+                Regex::new(pattern).map(|re| re.is_match(hostname)).unwrap_or(false)
+            })
+        }) {
+            // Add origin and referer from template
+            if let (Ok(name), Ok(val)) = (
+                HeaderName::from_str("origin"),
+                HeaderValue::from_str(group.origin),
+            ) {
+                headers.insert(name, val);
+            }
+            
+            if let (Ok(name), Ok(val)) = (
+                HeaderName::from_str("referer"),
+                HeaderValue::from_str(group.referer),
+            ) {
+                headers.insert(name, val);
+            }
 
-        headers
-    }
-}
-
-// Static domain templates
-pub static DOMAIN_TEMPLATES: Lazy<Vec<DomainTemplate>> = Lazy::new(|| {
-    let mut templates = Vec::new();
-
-    for group in DOMAIN_GROUPS.iter() {
-        let origin = group.origin.to_string();
-        let referer = group.referer.to_string();
-        let sec_fetch_site = group.sec_fetch_site.to_string();
-        let use_cache_headers = group.use_cache_headers;
-
-        // Special case for megacloud.blog domains with cache headers
-        let cache_patterns = vec![r"(?i)frostbite27\.pro$", r"(?i)icyhailstorm64\.wiki$"];
-
-        for pattern in &group.patterns {
-            let pattern = Regex::new(pattern).unwrap();
-            let is_cache_pattern = cache_patterns.contains(&&pattern.as_str());
-            let effective_use_cache_headers = use_cache_headers || is_cache_pattern;
-
-            templates.push(DomainTemplate {
-                pattern,
-                origin: origin.clone(),
-                referer: referer.clone(),
-                sec_fetch_site: sec_fetch_site.clone(),
-                use_cache_headers: effective_use_cache_headers,
-            });
+            // Add custom headers for this domain group if they exist
+            if let Some(custom_headers) = &group.custom_headers {
+                for (header_name, header_value) in custom_headers {
+                    if let (Ok(name), Ok(val)) = (
+                        HeaderName::from_str(header_name),
+                        HeaderValue::from_str(header_value),
+                    ) {
+                        headers.insert(name, val);
+                    }
+                }
+            }
         }
     }
 
-    // Add catch-all template
-    templates.push(DomainTemplate {
-        pattern: Regex::new(r"(?i).*").unwrap(),
-        origin: "".to_string(),
-        referer: "".to_string(),
-        sec_fetch_site: "cross-site".to_string(),
-        use_cache_headers: false,
-    });
-
-    templates
-});
-
-// Find matching template for a URL
-pub fn find_template_for_domain(url: &Url) -> &DomainTemplate {
-    let hostname = url.host_str().unwrap_or("");
-    DOMAIN_TEMPLATES
-        .iter()
-        .find(|template| template.pattern.is_match(hostname))
-        .unwrap_or_else(|| DOMAIN_TEMPLATES.last().unwrap())
+    headers
 }
 
-// Generate headers for a URL
-pub fn generate_headers_for_url(url: &Url) -> HeaderMap {
-    let template = find_template_for_domain(url);
-    template.generate_headers()
-}
+
+// DomainGroup {
+//     patterns: vec![r"(?i)\.example\.com$"],
+//     origin: "https://example.com",
+//     referer: "https://example.com/",
+//     custom_headers: Some(HashMap::from([
+//         ("cache-control", "no-cache"),
+//         ("pragma", "no-cache"),
+//         ("x-custom-header", "custom-value"),
+//     ])),
+// },
