@@ -25,7 +25,9 @@ static CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::builder()
         .pool_idle_timeout(std::time::Duration::from_secs(90))
         .http2_adaptive_window(true)
-        .pool_max_idle_per_host(10) 
+        .pool_max_idle_per_host(10)
+        .danger_accept_invalid_certs(true)  // Accept invalid SSL certificates
+        .danger_accept_invalid_hostnames(true)  // Accept invalid hostnames
         .build()
         .expect("Failed to build reqwest client")
 });
