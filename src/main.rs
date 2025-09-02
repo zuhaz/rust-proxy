@@ -34,7 +34,7 @@ static CLIENT: Lazy<Client> = Lazy::new(|| {
 static ENABLE_CORS: Lazy<bool> = Lazy::new(|| {
     std::env::var("ENABLE_CORS")
         .map(|v| v == "true" || v == "1")
-        .unwrap_or(false)
+        .unwrap_or(true)
 });
 
 fn validate_url(url: &str) -> Result<String, HttpResponse> {
@@ -51,13 +51,12 @@ fn validate_url(url: &str) -> Result<String, HttpResponse> {
 // Check if request has valid Origin or Referer - more permissive
 fn get_valid_origin(req: &HttpRequest) -> Option<String> {
     if !*ENABLE_CORS {
-        return Some("*".to_string());
+        return None;
     }
 
-    // Allow all origins in production
     if let Some(origin) = req.headers().get(header::ORIGIN) {
         if let Ok(origin_str) = origin.to_str() {
-            if ALLOWED_ORIGINS.contains(&origin_str) || ALLOWED_ORIGINS.contains(&"*") {
+            if ALLOWED_ORIGINS.contains(&origin_str) {
                 return Some(origin_str.to_string());
             }
         }
@@ -74,8 +73,7 @@ fn get_valid_origin(req: &HttpRequest) -> Option<String> {
         }
     }
 
-    // Default to allowing all origins in production
-    Some("*".to_string())
+    None
 }
 
 fn get_url(line: &str, base: &Url) -> Url {
@@ -90,6 +88,7 @@ fn process_m3u8_line(
     line: &str,
     scrape_url: &Url,
     headers_param: &Option<String>,
+    origin_param: &Option<String>,
 ) -> String {
     if line.is_empty() {
         return String::new();
@@ -97,7 +96,7 @@ fn process_m3u8_line(
     
     let first_char = unsafe { line.as_bytes().get_unchecked(0) };
     
-    if *first_char == b'#' {
+    if (*first_char) == b'#' {
         // Comment line processing
         if line.len() > 11 && line.as_bytes()[10] == b'K' && line.starts_with("#EXT-X-KEY") {
             // #EXT-X-KEY processing
@@ -114,6 +113,10 @@ fn process_m3u8_line(
                     if let Some(h) = headers_param {
                         new_q.push_str("&headers=");
                         new_q.push_str(h);
+                    }
+                    if let Some(o) = origin_param {
+                        new_q.push_str("&origin=");
+                        new_q.push_str(&urlencoding::encode(o));
                     }
                     
                     let mut result = String::with_capacity(line.len() + new_q.len());
@@ -139,12 +142,16 @@ fn process_m3u8_line(
                 new_q.push_str("&headers=");
                 new_q.push_str(h);
             }
+            if let Some(o) = origin_param {
+                new_q.push_str("&origin=");
+                new_q.push_str(&urlencoding::encode(o));
+            }
             
             let mut result = String::with_capacity(30 + new_q.len());
-            result.push_str("#EXT-X-MAP:URI=\"/?");
-            result.push_str(&new_q);
-            result.push('"');
-            return result;
+            let mut fixed = String::from("#EXT-X-MAP:URI=\"/?");
+            fixed.push_str(&new_q);
+            fixed.push('"');
+            return fixed;
         }
         
         // Generic URI/URL processing for other tags
@@ -177,6 +184,10 @@ fn process_m3u8_line(
                                 new_q.push_str("&headers=");
                                 new_q.push_str(h);
                             }
+                            if let Some(o) = origin_param {
+                                new_q.push_str("&origin=");
+                                new_q.push_str(&urlencoding::encode(o));
+                            }
                             
                             result.push_str(key);
                             result.push_str("=\"/?");
@@ -205,6 +216,10 @@ fn process_m3u8_line(
         new_q.push_str("&headers=");
         new_q.push_str(h);
     }
+    if let Some(o) = origin_param {
+        new_q.push_str("&origin=");
+        new_q.push_str(&urlencoding::encode(o));
+    }
     
     let mut result = String::with_capacity(new_q.len() + 10);
     result.push_str("/?");
@@ -216,7 +231,10 @@ fn process_m3u8_line(
 async fn handle_options(req: HttpRequest) -> impl Responder {
     let origin = match get_valid_origin(&req) {
         Some(o) => o,
-        None => "*".to_string(), // Default to allowing all
+        None => {
+            if *ENABLE_CORS { return HttpResponse::Forbidden().finish(); }
+            "*".to_string()
+        },
     };
 
     HttpResponse::Ok()
@@ -226,17 +244,12 @@ async fn handle_options(req: HttpRequest) -> impl Responder {
         .insert_header((header::ACCESS_CONTROL_EXPOSE_HEADERS, "Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control, Expires, Vary, ETag, Last-Modified"))
         .insert_header((header::ACCESS_CONTROL_MAX_AGE, "86400"))
         .insert_header((header::CROSS_ORIGIN_RESOURCE_POLICY, "cross-origin"))
+        .insert_header(("Vary", "Origin"))
         .finish()
 }
 
 #[get("/")]
 async fn m3u8_proxy(req: HttpRequest) -> impl Responder {
-    // Check and extract valid origin - more permissive
-    let origin = match get_valid_origin(&req) {
-        Some(o) => o,
-        None => "*".to_string(), // Default to allowing all
-    };
-
     // Parallel query parsing
     let query_future = task::spawn_blocking({
         let query_string = req.query_string().to_string();
@@ -260,6 +273,18 @@ async fn m3u8_proxy(req: HttpRequest) -> impl Responder {
         Ok(q) => q,
         Err(_) => return HttpResponse::InternalServerError().body("Query parsing failed"),
     };
+
+    // Determine allowed CORS origin (use ?origin override if provided and allowed)
+    let mut acao = get_valid_origin(&req);
+    if let Some(o) = query.get("origin") {
+        if ALLOWED_ORIGINS.contains(&o.as_str()) {
+            acao = Some(o.clone());
+        }
+    }
+
+    if *ENABLE_CORS && acao.is_none() {
+        return HttpResponse::Forbidden().finish();
+    }
 
     // Get and validate the URL
     let target_url = match query.get("url") {
@@ -286,7 +311,7 @@ async fn m3u8_proxy(req: HttpRequest) -> impl Responder {
 
             // Custom headers support
             if let Some(header_json) = query.get("headers") {
-                if let Ok(parsed) = serde_json::from_str::<HashMap<String, String>>(header_json) {
+                if let Ok(parsed) = serde_json::from_str::<HashMap<String, String>>(&header_json) {
                     for (k, v) in parsed {
                         if let (Ok(name), Ok(value)) = (
                             HeaderName::from_str(&k),
@@ -354,21 +379,36 @@ async fn m3u8_proxy(req: HttpRequest) -> impl Responder {
 
         let scrape_url = Url::parse(&target_url).unwrap();
         let headers_param = query.get("headers").cloned();
+        let origin_param = query.get("origin").cloned().or_else(|| {
+            // compute from request if not provided
+            if let Some(h) = req.headers().get(header::ORIGIN) {
+                h.to_str().ok().map(|s| s.to_string())
+            } else if let Some(r) = req.headers().get(header::REFERER) {
+                r.to_str().ok().and_then(|referer_str| {
+                    if let Ok(url) = Url::parse(referer_str) {
+                        let mut o = format!("{}://{}", url.scheme(), url.host_str().unwrap_or_default());
+                        if let Some(port) = url.port() { o.push(':'); o.push_str(&port.to_string()); }
+                        Some(o)
+                    } else { None }
+                })
+            } else { None }
+        });
 
         // Process m3u8 sequentially
         let lines = m3u8_text.lines();
         let mut processed_lines = Vec::with_capacity(lines.size_hint().0);
         
         for line in lines {
-            processed_lines.push(process_m3u8_line(line, &scrape_url, &headers_param));
+            processed_lines.push(process_m3u8_line(line, &scrape_url, &headers_param, &origin_param));
         }
 
         return HttpResponse::Ok()
-            .insert_header((header::ACCESS_CONTROL_ALLOW_ORIGIN, origin))
+            .insert_header((header::ACCESS_CONTROL_ALLOW_ORIGIN, acao.clone().unwrap_or("*".to_string())))
             .insert_header((header::ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS, HEAD"))
             .insert_header((header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type, Authorization, Range, Origin, Accept, Accept-Encoding, Accept-Language, Cache-Control, Pragma, Sec-Fetch-Dest, Sec-Fetch-Mode, Sec-Fetch-Site, Sec-Ch-Ua, Sec-Ch-Ua-Mobile, Sec-Ch-Ua-Platform, Connection"))
             .insert_header((header::ACCESS_CONTROL_EXPOSE_HEADERS, "Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control, Expires, Vary, ETag, Last-Modified"))
             .insert_header((header::CROSS_ORIGIN_RESOURCE_POLICY, "cross-origin"))
+            .insert_header(("Vary", "Origin"))
             .content_type("application/vnd.apple.mpegurl")
             .insert_header((header::CACHE_CONTROL, "no-cache, no-store, must-revalidate"))
             .body(processed_lines.join("\n"));
@@ -377,11 +417,12 @@ async fn m3u8_proxy(req: HttpRequest) -> impl Responder {
     let mut response_builder = HttpResponse::build(status);
     
     // Set CORS headers for all responses - more permissive
-    response_builder.insert_header((header::ACCESS_CONTROL_ALLOW_ORIGIN, origin.clone()));
+    response_builder.insert_header((header::ACCESS_CONTROL_ALLOW_ORIGIN, acao.clone().unwrap_or("*".to_string())));
     response_builder.insert_header((header::ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS, HEAD"));
     response_builder.insert_header((header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type, Authorization, Range, Origin, Accept, Accept-Encoding, Accept-Language, Cache-Control, Pragma, Sec-Fetch-Dest, Sec-Fetch-Mode, Sec-Fetch-Site, Sec-Ch-Ua, Sec-Ch-Ua-Mobile, Sec-Ch-Ua-Platform, Connection"));
     response_builder.insert_header((header::ACCESS_CONTROL_EXPOSE_HEADERS, "Content-Length, Content-Range, Accept-Ranges, Content-Type, Cache-Control, Expires, Vary, ETag, Last-Modified"));
     response_builder.insert_header((header::CROSS_ORIGIN_RESOURCE_POLICY, "cross-origin"));
+    response_builder.insert_header(("Vary", "Origin"));
     
     // Copy important headers from the original response
     for (name, value) in headers_copy.iter() {
@@ -426,7 +467,7 @@ async fn main() -> std::io::Result<()> {
             .route("/", actix_web::web::method(Method::OPTIONS).to(handle_options))
     })
     .workers(num_cpus::get())
-    .bind("0.0.0.0:8080")?
+    .bind("0.0.0.0:8081")?
     .run()
     .await
 }
