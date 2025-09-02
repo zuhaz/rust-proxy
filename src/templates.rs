@@ -295,6 +295,32 @@ pub fn generate_headers_for_url(url: &Url, custom_origin: Option<&str>) -> Heade
                     }
                 }
             }
+        } else {
+            // Fallback: use the URL's own origin and referer when no template is found
+            let scheme = url.scheme();
+            if let Some(host) = url.host_str() {
+                let mut origin = String::with_capacity(scheme.len() + host.len() + 3);
+                origin.push_str(scheme);
+                origin.push_str("://");
+                origin.push_str(host);
+
+                if let (Ok(name), Ok(val)) = (
+                    HeaderName::from_str("origin"),
+                    HeaderValue::from_str(&origin),
+                ) {
+                    headers.insert(name, val);
+                }
+
+                // Ensure referer ends with '/'
+                let mut referer = origin;
+                referer.push('/');
+                if let (Ok(name), Ok(val)) = (
+                    HeaderName::from_str("referer"),
+                    HeaderValue::from_str(&referer),
+                ) {
+                    headers.insert(name, val);
+                }
+            }
         }
     }
 
