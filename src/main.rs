@@ -34,7 +34,7 @@ static CLIENT: Lazy<Client> = Lazy::new(|| {
 static ENABLE_CORS: Lazy<bool> = Lazy::new(|| {
     std::env::var("ENABLE_CORS")
         .map(|v| v == "true" || v == "1")
-        .unwrap_or(true)
+        .unwrap_or(false)
 });
 
 fn validate_url(url: &str) -> Result<String, HttpResponse> {
