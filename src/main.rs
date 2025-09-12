@@ -8,17 +8,20 @@ use reqwest::{
     header::{HeaderName, HeaderValue},
     Client,
 };
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, str::FromStr, env};
 use url::Url;
 use tokio::task;
 
 mod templates;
 
-// Allowed origins - more permissive for production
-static ALLOWED_ORIGINS: Lazy<[&str; 2]> = Lazy::new(|| [
-    "http://localhost:5173",
-    "http://localhost:3000"
-]);
+static ALLOWED_ORIGINS: Lazy<Vec<String>> = Lazy::new(|| {
+    env::var("ALLOWED_ORIGINS")
+        .unwrap_or_else(|_| "http://localhost:5173,http://localhost:3000".to_string())
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+});
 
 // Reqwest client pool
 static CLIENT: Lazy<Client> = Lazy::new(|| {
@@ -56,7 +59,7 @@ fn get_valid_origin(req: &HttpRequest) -> Option<String> {
 
     if let Some(origin) = req.headers().get(header::ORIGIN) {
         if let Ok(origin_str) = origin.to_str() {
-            if ALLOWED_ORIGINS.contains(&origin_str) {
+            if ALLOWED_ORIGINS.contains(&origin_str.to_string()) {
                 return Some(origin_str.to_string());
             }
         }
@@ -66,9 +69,9 @@ fn get_valid_origin(req: &HttpRequest) -> Option<String> {
         if let Ok(referer_str) = referer.to_str() {
             if let Some(allowed) = ALLOWED_ORIGINS
                 .iter()
-                .find(|origin| referer_str.starts_with(*origin))
+                .find(|origin| referer_str.starts_with(origin.as_str()))
             {
-                return Some((*allowed).to_string());
+                return Some(allowed.clone());
             }
         }
     }

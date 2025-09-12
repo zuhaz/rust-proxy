@@ -1,0 +1,12 @@
+services:
+  rustproxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/zaocorelabs/rustproxy
+    container_name: rustproxy
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
