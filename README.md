@@ -17,8 +17,8 @@ It rewrites `.m3u8` files so that all segment requests (like `.ts`, `.vtt`, etc.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/zaocorelabs/rustproxy.git
-cd rustproxy
+git clone https://github.com/zuhaz/rust-proxy.git
+cd rust-proxy
 ```
 
 ### 2. (If needed) Install Rust
@@ -52,13 +52,13 @@ To change the port or allowed origins, edit `main.rs`.
 Pull the latest image:
 
 ```bash
-docker pull ghcr.io/zaocorelabs/rustproxy:latest
+docker pull ghcr.io/zuhaz/rustproxy:latest
 ```
 
 Run it:
 
 ```bash
-docker run -p 8080:8080 ghcr.io/zaocorelabs/rustproxy:latest
+docker run -p 8080:8080 ghcr.io/zuhaz/rustproxy:latest
 ```
 
 ---
@@ -111,10 +111,14 @@ ENABLE_CORS=false
 
 ### To add a new allowed origin
 
-You need to add it to the `ALLOWED_ORIGINS` list in the `.env` file:
+You need to update the following section in `main.rs`:
 
-```env
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+```rust
+static ALLOWED_ORIGINS: Lazy<[&str; N]> = Lazy::new(|| [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://your-new-origin.com", // <-- add here
+]);
 ```
 
 Both changes are required for proper CORS behavior when `ENABLE_CORS=true`.
@@ -127,4 +131,3 @@ Using: [Apache License 2.0](LICENSE)
 ## Credits
 
 Inspired by: https://github.com/Gratenes/m3u8CloudflareWorkerProxy
-Forked from: https://github.com/zuhaz/rust-proxy
