@@ -82,7 +82,7 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
             custom_headers: None,
         },        
         DomainGroup {
-            patterns: vec![r"(?i)(?:^|\.)viddsn\."],
+            patterns: vec![r"(?i)(?:^|\.)viddsn\.", r"(?i)\.anilike\.cyou$"],
             origin: "https://vidwish.live/",
             referer: "https://vidwish.live/",
             custom_headers: None,
@@ -146,8 +146,8 @@ static DOMAIN_GROUPS: Lazy<Vec<DomainGroup>> = Lazy::new(|| {
         },
         DomainGroup {
             patterns: vec![r"(?i)\.echovideo\.to$"],
-            origin: "https://aniwave.at",
-            referer: "https://aniwave.at/",
+            origin: "https://aniwave.se",
+            referer: "https://aniwave.se/",
             custom_headers: None,
         },
         DomainGroup {
