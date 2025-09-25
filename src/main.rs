@@ -87,7 +87,7 @@ fn get_url(line: &str, base: &Url) -> Url {
 fn process_m3u8_line(
     line: &str,
     scrape_url: &Url,
-    headers_param: &Option<String>,
+    origin_param: &Option<String>,  
 ) -> String {
     if line.is_empty() {
         return String::new();
@@ -109,9 +109,9 @@ fn process_m3u8_line(
                     let mut new_q = String::with_capacity(resolved.as_str().len() + 50);
                     new_q.push_str("url=");
                     new_q.push_str(&urlencoding::encode(resolved.as_str()));
-                    if let Some(h) = headers_param {
-                        new_q.push_str("&headers=");
-                        new_q.push_str(h);
+                    if let Some(o) = origin_param {
+                        new_q.push_str("&origin=");
+                        new_q.push_str(o);
                     }
                     
                     let mut result = String::with_capacity(line.len() + new_q.len());
@@ -133,9 +133,9 @@ fn process_m3u8_line(
             let mut new_q = String::with_capacity(resolved.as_str().len() + 50);
             new_q.push_str("url=");
             new_q.push_str(&urlencoding::encode(resolved.as_str()));
-            if let Some(h) = headers_param {
-                new_q.push_str("&headers=");
-                new_q.push_str(h);
+            if let Some(o) = origin_param {
+                new_q.push_str("&origin=");
+                new_q.push_str(o);
             }
             
             let mut fixed = String::from("#EXT-X-MAP:URI=\"/?");
@@ -170,9 +170,9 @@ fn process_m3u8_line(
                             let mut new_q = String::with_capacity(resolved.as_str().len() + 50);
                             new_q.push_str("url=");
                             new_q.push_str(&urlencoding::encode(resolved.as_str()));
-                            if let Some(h) = headers_param {
-                                new_q.push_str("&headers=");
-                                new_q.push_str(h);
+                            if let Some(o) = origin_param {
+                                new_q.push_str("&origin=");
+                                new_q.push_str(o);
                             }
                             
                             result.push_str(key);
@@ -198,11 +198,11 @@ fn process_m3u8_line(
     let mut new_q = String::with_capacity(resolved.as_str().len() + 50);
     new_q.push_str("url=");
     new_q.push_str(&urlencoding::encode(resolved.as_str()));
-    if let Some(h) = headers_param {
-        new_q.push_str("&headers=");
-        new_q.push_str(h);
+    if let Some(o) = origin_param {
+        new_q.push_str("&origin=");
+        new_q.push_str(&urlencoding::encode(o));
     }
-    
+
     let mut result = String::with_capacity(new_q.len() + 10);
     result.push_str("/?");
     result.push_str(&new_q);
@@ -362,16 +362,16 @@ async fn m3u8_proxy(req: HttpRequest) -> impl Responder {
         let looks_like_m3u8 = m3u8_text.trim_start().starts_with("#EXTM3U");
         if ct_is_m3u8 || looks_like_m3u8 {
             let scrape_url = Url::parse(&target_url).unwrap();
-            let headers_param = query.get("headers").cloned();
+            let _headers_param = query.get("headers").cloned();
+            let origin_param = query.get("origin").cloned();
             
             // Process m3u8 sequentially
             let lines = m3u8_text.lines();
             let mut processed_lines = Vec::with_capacity(lines.size_hint().0);
             
             for line in lines {
-                processed_lines.push(process_m3u8_line(line, &scrape_url, &headers_param));
+                processed_lines.push(process_m3u8_line(line, &scrape_url, &origin_param));
             }
-
             return HttpResponse::Ok()
                 .insert_header((header::ACCESS_CONTROL_ALLOW_ORIGIN, acao.clone().unwrap_or("*".to_string())))
                 .insert_header((header::ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS, HEAD"))
